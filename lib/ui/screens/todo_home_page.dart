@@ -9,6 +9,7 @@ import '../widgets/task_list.dart' as task_list_widget;
 import 'chatbot_page.dart';
 import 'package:uuid/uuid.dart';
 import '../../models/priority.dart' as priority_model;
+import 'statistics_screen.dart';
 
 class TodoHomePage extends StatefulWidget {
   final Function(ThemeMode) onThemeChanged;
@@ -30,8 +31,25 @@ class _TodoHomePageState extends State<TodoHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Todo List'),
+        title: Text(context.read<TaskService>().currentList?.name ?? 'Todo List'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.bar_chart),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const StatisticsScreen(),
+                ),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.filter_list),
+            onPressed: () {
+              _showFilterDialog(context);
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.brightness_6),
             onPressed: _toggleTheme,
@@ -321,5 +339,51 @@ class _TodoHomePageState extends State<TodoHomePage> {
       case TaskFilter.dueToday:
         return 'Hôm nay';
     }
+  }
+
+  void _showFilterDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        final taskService = context.read<TaskService>();
+        return AlertDialog(
+          title: const Text('Lọc công việc'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: TaskFilter.values.map((filter) {
+              return RadioListTile<TaskFilter>(
+                title: Text(_getFilterLabel(filter)),
+                value: filter,
+                groupValue: taskService.currentFilter,
+                onChanged: (value) {
+                  if (value != null) {
+                    taskService.setFilter(value);
+                    Navigator.pop(context);
+                  }
+                },
+              );
+            }).toList(),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Đóng'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize any heavy operations here
+  }
+
+  @override
+  void dispose() {
+    // Clean up any resources here
+    super.dispose();
   }
 } 
