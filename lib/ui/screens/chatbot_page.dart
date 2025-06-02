@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
-import 'package:uuid/uuid.dart';
 import '../../models/task.dart';
-import '../../models/priority.dart';
+import '../../services/gemini_service.dart';
+import 'package:uuid/uuid.dart';
+import '../../models/priority.dart' as priority_model;
 
 class ChatbotPage extends StatefulWidget {
   final Function(List<Task>) onTasksGenerated;
@@ -19,157 +18,24 @@ class ChatbotPage extends StatefulWidget {
 
 class _ChatbotPageState extends State<ChatbotPage> {
   final TextEditingController _messageController = TextEditingController();
-  final List<Map<String, String>> _messages = [];
+  final List<ChatMessage> _messages = [];
   bool _isLoading = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _addBotMessage('Xin chào! Tôi có thể giúp bạn tạo danh sách công việc. Hãy mô tả những gì bạn cần làm.');
-  }
-
-  void _addUserMessage(String message) {
-    setState(() {
-      _messages.add({
-        'role': 'user',
-        'content': message,
-      });
-    });
-  }
-
-  void _addBotMessage(String message) {
-    setState(() {
-      _messages.add({
-        'role': 'assistant',
-        'content': message,
-      });
-    });
-  }
-
-  Future<void> _sendMessage() async {
-    if (_messageController.text.isEmpty) return;
-
-    final userMessage = _messageController.text;
-    _messageController.clear();
-
-    setState(() {
-      _messages.add({
-        'role': 'user',
-        'content': userMessage,
-      });
-      _isLoading = true;
-    });
-
-    try {
-      final response = await http.post(
-        Uri.parse('https://api.openai.com/v1/chat/completions'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer YOUR_API_KEY',
-        },
-        body: jsonEncode({
-          'model': 'gpt-3.5-turbo',
-          'messages': [
-            {
-              'role': 'system',
-              'content': 'Bạn là một trợ lý thông minh giúp tạo danh sách công việc. Hãy trả lời bằng tiếng Việt.',
-            },
-            ..._messages.map((m) => {
-                  'role': m['role'],
-                  'content': m['content'],
-                }),
-          ],
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final assistantMessage = data['choices'][0]['message']['content'];
-
-        setState(() {
-          _messages.add({
-            'role': 'assistant',
-            'content': assistantMessage,
-          });
-        });
-
-        // Phân tích câu trả lời để tạo danh sách công việc
-        final tasks = _parseTasksFromResponse(assistantMessage);
-        if (tasks.isNotEmpty) {
-          widget.onTasksGenerated(tasks);
-        }
-      } else {
-        throw Exception('Failed to get response');
-      }
-    } catch (e) {
-      setState(() {
-        _messages.add({
-          'role': 'assistant',
-          'content': 'Xin lỗi, đã có lỗi xảy ra. Vui lòng thử lại sau.',
-        });
-      });
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-
-  List<Task> _parseTasksFromResponse(String response) {
-    final tasks = <Task>[];
-    final lines = response.split('\n');
-
-    for (final line in lines) {
-      if (line.startsWith('- ')) {
-        final title = line.substring(2).trim();
-        if (title.isNotEmpty) {
-          tasks.add(Task(
-            id: Uuid().v4(),
-            title: title,
-            priority: Priority.normal,
-            tags: [],
-            createdAt: DateTime.now(),
-          ));
-        }
-      }
-    }
-
-    return tasks;
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Chatbot'),
+        title: const Text('AI Assistant'),
       ),
       body: Column(
         children: [
           Expanded(
             child: ListView.builder(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(8.0),
               itemCount: _messages.length,
               itemBuilder: (context, index) {
                 final message = _messages[index];
-                final isUser = message['role'] == 'user';
-
-                return Align(
-                  alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: isUser ? Colors.blue : Colors.grey[300],
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      message['content']!,
-                      style: TextStyle(
-                        color: isUser ? Colors.white : Colors.black,
-                      ),
-                    ),
-                  ),
-                );
+                return _buildMessageBubble(message);
               },
             ),
           ),
@@ -204,6 +70,103 @@ class _ChatbotPageState extends State<ChatbotPage> {
     );
   }
 
+  Widget _buildMessageBubble(ChatMessage message) {
+    return Align(
+      alignment: message.isUser ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
+        padding: const EdgeInsets.all(12.0),
+        decoration: BoxDecoration(
+          color: message.isUser
+              ? Theme.of(context).primaryColor
+              : Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(20.0),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Text(
+          message.text,
+          style: TextStyle(
+            color: message.isUser ? Colors.white : null,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _sendMessage() async {
+    final text = _messageController.text.trim();
+    if (text.isEmpty) return;
+
+    setState(() {
+      _messages.add(ChatMessage(text: text, isUser: true));
+      _messageController.clear();
+      _isLoading = true;
+    });
+
+    try {
+      final tasks = await GeminiService.generateTasks(text);
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (tasks.isEmpty) {
+        setState(() {
+          _messages.add(ChatMessage(
+            text: 'Không tìm thấy công việc phù hợp.',
+            isUser: false,
+          ));
+        });
+        return;
+      }
+
+      // Hiển thị bottom sheet để xem trước task và chọn tạo hoặc từ chối
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        ),
+        builder: (_) => TaskPreviewSheet(
+          tasks: tasks,
+          onAccept: () {
+            widget.onTasksGenerated(tasks);
+            Navigator.pop(context);
+            setState(() {
+              _messages.add(ChatMessage(
+                text: 'Đã thêm ${tasks.length} công việc từ gợi ý của AI!',
+                isUser: false,
+              ));
+            });
+          },
+          onReject: () {
+            Navigator.pop(context);
+            setState(() {
+              _messages.add(ChatMessage(
+                text: 'Bạn đã từ chối danh sách công việc.',
+                isUser: false,
+              ));
+            });
+          },
+        ),
+      );
+    } catch (e) {
+      setState(() {
+        _messages.add(ChatMessage(
+          text: 'Xin lỗi, đã có lỗi xảy ra: $e',
+          isUser: false,
+        ));
+        _isLoading = false;
+      });
+    }
+  }
+
   @override
   void dispose() {
     _messageController.dispose();
@@ -214,69 +177,11 @@ class _ChatbotPageState extends State<ChatbotPage> {
 class ChatMessage {
   final String text;
   final bool isUser;
-  final DateTime timestamp;
 
   ChatMessage({
     required this.text,
     required this.isUser,
-    required this.timestamp,
   });
-}
-
-class ChatBubble extends StatelessWidget {
-  final ChatMessage message;
-
-  const ChatBubble({
-    super.key,
-    required this.message,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: message.isUser 
-            ? MainAxisAlignment.end 
-            : MainAxisAlignment.start,
-        children: [
-          if (!message.isUser) ...[
-            CircleAvatar(
-              backgroundColor: Colors.purple,
-              radius: 16,
-              child: const Icon(Icons.smart_toy, color: Colors.white, size: 16),
-            ),
-            const SizedBox(width: 8),
-          ],
-          Flexible(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: BoxDecoration(
-                color: message.isUser 
-                    ? Colors.blue 
-                    : Colors.grey[300],
-                borderRadius: BorderRadius.circular(18),
-              ),
-              child: Text(
-                message.text,
-                style: TextStyle(
-                  color: message.isUser ? Colors.white : Colors.black87,
-                ),
-              ),
-            ),
-          ),
-          if (message.isUser) ...[
-            const SizedBox(width: 8),
-            CircleAvatar(
-              backgroundColor: Colors.blue,
-              radius: 16,
-              child: const Icon(Icons.person, color: Colors.white, size: 16),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
 }
 
 class TaskPreviewSheet extends StatelessWidget {
