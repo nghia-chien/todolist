@@ -6,7 +6,7 @@ import '../models/priority.dart';
 
 class GeminiService {
   static const String _baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
-  static const String _apiKey = 'AIzaSyCoyLOTSnY6jh4qoKB169lrBRUbzZsCd6Y';
+  static const String _apiKey = '';
 
   /// Generate tasks from user input using Gemini AI
   static Future<List<Task>> generateTasks(String userInput) async {
