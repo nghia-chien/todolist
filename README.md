@@ -36,7 +36,7 @@
 
 1. Clone repository:
 ```bash
-git clone https://github.com/yourusername/todo-app.git
+git clone https://github.com/nghia-chien/todo-app.git
 ```
 
 2. Cài đặt dependencies:
@@ -48,15 +48,6 @@ flutter pub get
 ```bash
 flutter run
 ```
-
-## 🔧 Cấu hình
-
-1. Tạo file `.env` trong thư mục gốc:
-```
-GEMINI_API_KEY=your_api_key_here
-```
-
-2. Thêm API key vào `lib/services/gemini_service.dart`
 
 ## 📦 Cấu trúc thư mục
 
