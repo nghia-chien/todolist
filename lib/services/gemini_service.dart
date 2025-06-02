@@ -56,33 +56,33 @@ class GeminiService {
 
   /// Build prompt for Gemini
   static String _buildPrompt(String userInput) {
-    return '''
-Dựa trên yêu cầu sau, hãy tạo danh sách các công việc cần làm (todo list) dưới dạng JSON:
+  return '''
+Bạn là một trợ lý quản lý công việc. Dựa trên yêu cầu sau, hãy tạo một danh sách các công việc cần làm (todo list) ở định dạng JSON:
 
 "$userInput"
 
-Hãy trả về một JSON array với format sau:
+Yêu cầu định dạng đầu ra là một JSON array, mỗi phần tử có cấu trúc sau:
 [
   {
-    "title": "Tên công việc",
-    "description": "Mô tả chi tiết (có thể null)",
-    "priority": "low|normal|high|urgent",
-    "estimatedDuration": "số phút ước tính",
-    "tags": ["tag1", "tag2"]
+    "title": "Tên công việc (ngắn gọn, rõ ràng)",
+    "description": "Mô tả chi tiết về cách thực hiện (có thể để null nếu không cần)",
+    "priority": "low" | "normal" | "high" | "urgent",
+    "estimatedDuration": "Thời gian ước tính để hoàn thành, tính bằng phút (số nguyên)",
+    "tags": ["thẻ phân loại", "có thể rỗng"]
   }
 ]
 
-Quy tắc:
-- Chia nhỏ công việc lớn thành các công việc nhỏ hơn
-- Đặt tên công việc ngắn gọn, rõ ràng
-- Mô tả chi tiết cách thực hiện
-- Đánh giá độ ưu tiên phù hợp
-- Ước tính thời gian thực hiện
-- Thêm tags phù hợp
+Hướng dẫn xử lý:
+- Phân chia các công việc lớn thành các bước nhỏ dễ thực hiện
+- Đặt tên ngắn gọn, mô tả rõ ràng
+- Ước lượng thời gian phù hợp với nội dung công việc
+- Gắn độ ưu tiên hợp lý dựa trên ngữ cảnh
+- Thêm tags liên quan đến nội dung hoặc loại công việc (ví dụ: "work", "personal", "urgent", v.v.)
 
-Chỉ trả về JSON array, không có text khác.
+⚠️ Chỉ trả về **JSON array hợp lệ**, không bao gồm lời giải thích, ghi chú hoặc văn bản nào khác.
 ''';
-  }
+}
+
 
   /// Parse tasks from Gemini response
   static List<Task> _parseTasksFromResponse(String response) {
@@ -230,3 +230,4 @@ Chỉ trả về JSON array, không có text khác.
     return tasks;
   }
 }
+

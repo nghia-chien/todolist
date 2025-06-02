@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+ import 'package:flutter/material.dart';
 import '../../models/task.dart';
 import '../../services/gemini_service.dart';
 import 'package:uuid/uuid.dart';
@@ -184,7 +184,7 @@ class ChatMessage {
   });
 }
 
-class TaskPreviewSheet extends StatefulWidget {
+class TaskPreviewSheet extends StatelessWidget {
   final List<Task> tasks;
   final VoidCallback onAccept;
   final VoidCallback onReject;
@@ -197,38 +197,9 @@ class TaskPreviewSheet extends StatefulWidget {
   });
 
   @override
-  State<TaskPreviewSheet> createState() => _TaskPreviewSheetState();
-}
-
-class _TaskPreviewSheetState extends State<TaskPreviewSheet> {
-  late List<Task> editableTasks;
-
-  @override
-  void initState() {
-    super.initState();
-    editableTasks = widget.tasks.map((task) => task.clone()).toList();
-  }
-
-  void _removeTask(int index) {
-    setState(() {
-      editableTasks.removeAt(index);
-    });
-  }
-
-  void _editTask(int index, String title, String? description, priority_model.Priority priority) {
-    setState(() {
-      editableTasks[index] = editableTasks[index].copyWith(
-        title: title,
-        description: description,
-        priority: priority,
-      );
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Container(
-      height: MediaQuery.of(context).size.height * 0.8,
+      height: MediaQuery.of(context).size.height * 0.7,
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
@@ -241,58 +212,26 @@ class _TaskPreviewSheetState extends State<TaskPreviewSheet> {
             ),
           ),
           const SizedBox(height: 16),
-          Text('Chỉnh sửa công việc', style: Theme.of(context).textTheme.headlineSmall),
+          Text(
+            'Xem trước công việc',
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
           const SizedBox(height: 16),
           Expanded(
             child: ListView.builder(
-              itemCount: editableTasks.length,
+              itemCount: tasks.length,
               itemBuilder: (context, index) {
-                final task = editableTasks[index];
-                final titleController = TextEditingController(text: task.title);
-                final descController = TextEditingController(text: task.description ?? '');
-
+                final task = tasks[index];
                 return Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Column(
-                      children: [
-                        TextField(
-                          controller: titleController,
-                          decoration: const InputDecoration(labelText: 'Tiêu đề'),
-                          onChanged: (value) {
-                            _editTask(index, value, descController.text, task.priority);
-                          },
-                        ),
-                        TextField(
-                          controller: descController,
-                          decoration: const InputDecoration(labelText: 'Mô tả'),
-                          onChanged: (value) {
-                            _editTask(index, titleController.text, value, task.priority);
-                          },
-                        ),
-                        DropdownButton<priority_model.Priority>(
-                          value: task.priority,
-                          isExpanded: true,
-                          items: priority_model.Priority.values.map((priority) {
-                            return DropdownMenuItem(
-                              value: priority,
-                              child: Text(priority.label),
-                            );
-                          }).toList(),
-                          onChanged: (value) {
-                            if (value != null) {
-                              _editTask(index, titleController.text, descController.text, value);
-                            }
-                          },
-                        ),
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.red),
-                            onPressed: () => _removeTask(index),
-                          ),
-                        ),
-                      ],
+                  child: ListTile(
+                    leading: Icon(task.priority.icon, color: task.priority.color),
+                    title: Text(task.title),
+                    subtitle: task.description != null 
+                        ? Text(task.description!)
+                        : null,
+                    trailing: Chip(
+                      label: Text(task.priority.label),
+                      backgroundColor: task.priority.color.withOpacity(0.2),
                     ),
                   ),
                 );
@@ -304,17 +243,14 @@ class _TaskPreviewSheetState extends State<TaskPreviewSheet> {
             children: [
               Expanded(
                 child: OutlinedButton(
-                  onPressed: widget.onReject,
+                  onPressed: onReject,
                   child: const Text('Từ chối'),
                 ),
               ),
               const SizedBox(width: 16),
               Expanded(
                 child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    widget.onAccept();
-                  },
+                  onPressed: onAccept,
                   child: const Text('Thêm vào danh sách'),
                 ),
               ),

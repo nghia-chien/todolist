@@ -57,6 +57,22 @@ class Task {
     );
   }
 
+  Task clone() {
+    return Task(
+      id: const Uuid().v4(), // có thể dùng `id: id` nếu không cần thay đổi
+      title: title,
+      description: description,
+      startTime: startTime,
+      dueDate: dueDate,
+      setAlarm: setAlarm,
+      priority: priority,
+      isDone: isDone,
+      tags: List<String>.from(tags),
+      createdAt: createdAt,
+      completedAt: completedAt,
+    );
+  }
+
   bool get isOverdue {
     if (dueDate == null || isDone) return false;
     return DateTime.now().isAfter(dueDate!);
@@ -113,4 +129,3 @@ class Task {
     );
   }
 }
-
